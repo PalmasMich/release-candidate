@@ -8,11 +8,43 @@ on:
     branches:
       - master
 
+env:
+  rgbds_version: v1.0.3
+
 jobs:
-  bootstrap-tests:
+  bootstrap-build:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+
+      - name: Check out RGBDS
+        uses: actions/checkout@v7
+        with:
+          path: rgbds
+          ref: ${{ env.rgbds_version }}
+          repository: gbdev/rgbds
+
+      - name: Install RGBDS
+        working-directory: rgbds
+        run: |
+          sudo apt-get update
+          sudo apt-get install -yq bison libpng-dev pkg-config
+          sudo make -j$(nproc) install
+
+      - name: Remove RGBDS sources
+        run: rm -rf rgbds
+
+      - name: Apply Release Candidate bootstrap
+        run: python tools/release_candidate/bootstrap.py
+
       - name: Run bootstrap tests
         run: python -m unittest tests/test_release_candidate_bootstrap.py -v
+
+      - name: Build Game Boy Color ROM
+        run: make -j$(nproc)
+
+      - name: Verify build output
+        run: |
+          test -s pokecrystal.gbc
+          sha256sum pokecrystal.gbc
