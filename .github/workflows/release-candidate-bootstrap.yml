@@ -35,13 +35,13 @@ jobs:
       - name: Remove RGBDS sources
         run: rm -rf rgbds
 
-      - name: Build clean Crystal baseline
-        run: make -j$(nproc)
+      - name: Build clean Crystal Rev A baseline
+        run: make -j$(nproc) crystal11
 
-      - name: Verify clean Crystal baseline
+      - name: Verify clean Crystal Rev A baseline
         run: |
-          echo "f4cd194bdee0d04ca4eac29e09b8e4e9d818c133  pokecrystal.gbc" | sha1sum -c -
-          cp pokecrystal.gbc /tmp/pokecrystal-stock.gbc
+          echo "f2f52230b536214ef7c9924f483392993e226cfb  pokecrystal11.gbc" | sha1sum -c -
+          cp pokecrystal11.gbc /tmp/pokecrystal11-stock.gbc
 
       - name: Clean baseline build
         run: make clean
@@ -52,26 +52,26 @@ jobs:
       - name: Run Release Candidate tests
         run: python -m unittest discover -s tests -p 'test_*.py' -v
 
-      - name: Build Release Candidate ROM
-        run: make -j$(nproc)
+      - name: Build Release Candidate Rev A ROM
+        run: make -j$(nproc) crystal11
 
-      - name: Verify Release Candidate build
+      - name: Verify Release Candidate Rev A build
         run: |
-          test -s pokecrystal.gbc
-          sha256sum pokecrystal.gbc
+          test -s pokecrystal11.gbc
+          sha256sum pokecrystal11.gbc
 
-      - name: Generate IPS patch
+      - name: Generate IPS patch for Rev A
         run: |
           python tools/release_candidate/make_ips.py \
-            /tmp/pokecrystal-stock.gbc \
-            pokecrystal.gbc \
-            release-candidate-v0.0.1.ips
-          test -s release-candidate-v0.0.1.ips
+            /tmp/pokecrystal11-stock.gbc \
+            pokecrystal11.gbc \
+            release-candidate-v0.0.1-rev-a.ips
+          test -s release-candidate-v0.0.1-rev-a.ips
 
       - name: Upload IPS patch only
         uses: actions/upload-artifact@v4
         with:
-          name: release-candidate-v0.0.1-patch
-          path: release-candidate-v0.0.1.ips
+          name: release-candidate-v0.0.1-rev-a-patch
+          path: release-candidate-v0.0.1-rev-a.ips
           if-no-files-found: error
           compression-level: 0
