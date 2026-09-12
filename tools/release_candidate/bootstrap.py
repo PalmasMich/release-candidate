@@ -27,7 +27,7 @@ def apply_bootstrap(root: Path = ROOT) -> int:
     changes += _replace_once(
         root / "Makefile",
         "RGBFIXFLAGS += -Cjv -t PM_CRYSTAL -k 01 -l 0x33 -m MBC3+TIMER+RAM+BATTERY -r 3 -p 0",
-        "RGBFIXFLAGS += -Cjv -t REL_CANDIDATE -k 01 -l 0x33 -m MBC3+TIMER+RAM+BATTERY -r 3 -p 0",
+        "RGBFIXFLAGS += -Cjv -t RELEASECAND -k 01 -l 0x33 -m MBC3+TIMER+RAM+BATTERY -r 3 -p 0",
     )
 
     changes += _replace_once(
