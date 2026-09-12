@@ -35,16 +35,43 @@ jobs:
       - name: Remove RGBDS sources
         run: rm -rf rgbds
 
+      - name: Build clean Crystal baseline
+        run: make -j$(nproc)
+
+      - name: Verify clean Crystal baseline
+        run: |
+          echo "f4cd194bdee0d04ca4eac29e09b8e4e9d818c133  pokecrystal.gbc" | sha1sum -c -
+          cp pokecrystal.gbc /tmp/pokecrystal-stock.gbc
+
+      - name: Clean baseline build
+        run: make clean
+
       - name: Apply Release Candidate bootstrap
         run: python tools/release_candidate/bootstrap.py
 
-      - name: Run bootstrap tests
-        run: python -m unittest tests/test_release_candidate_bootstrap.py -v
+      - name: Run Release Candidate tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
 
-      - name: Build Game Boy Color ROM
+      - name: Build Release Candidate ROM
         run: make -j$(nproc)
 
-      - name: Verify build output
+      - name: Verify Release Candidate build
         run: |
           test -s pokecrystal.gbc
           sha256sum pokecrystal.gbc
+
+      - name: Generate IPS patch
+        run: |
+          python tools/release_candidate/make_ips.py \
+            /tmp/pokecrystal-stock.gbc \
+            pokecrystal.gbc \
+            release-candidate-v0.0.1.ips
+          test -s release-candidate-v0.0.1.ips
+
+      - name: Upload IPS patch only
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-candidate-v0.0.1-patch
+          path: release-candidate-v0.0.1.ips
+          if-no-files-found: error
+          compression-level: 0
