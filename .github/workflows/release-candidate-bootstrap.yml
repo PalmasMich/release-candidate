@@ -1,0 +1,84 @@
+name: Release Candidate bootstrap
+
+on:
+  push:
+    branches:
+      - feature/cagliari-bootstrap
+  pull_request:
+    branches:
+      - master
+
+env:
+  rgbds_version: v1.0.3
+
+jobs:
+  bootstrap-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Check out RGBDS
+        uses: actions/checkout@v7
+        with:
+          path: rgbds
+          ref: ${{ env.rgbds_version }}
+          repository: gbdev/rgbds
+
+      - name: Install RGBDS
+        working-directory: rgbds
+        run: |
+          sudo apt-get update
+          sudo apt-get install -yq bison libpng-dev pkg-config
+          sudo make -j$(nproc) install
+
+      - name: Remove RGBDS sources
+        run: rm -rf rgbds
+
+      - name: Build clean Crystal Rev A baseline
+        run: make -j$(nproc) crystal11
+
+      - name: Verify clean Crystal Rev A baseline
+        run: |
+          echo "f2f52230b536214ef7c9924f483392993e226cfb  pokecrystal11.gbc" | sha1sum -c -
+          cp pokecrystal11.gbc /tmp/pokecrystal11-stock.gbc
+
+      - name: Clean baseline build
+        run: make clean
+
+      - name: Apply Release Candidate bootstrap
+        run: python tools/release_candidate/bootstrap.py
+
+      - name: Run Release Candidate tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+      - name: Build Release Candidate Rev A ROM
+        run: make -j$(nproc) crystal11
+
+      - name: Verify Release Candidate Rev A build
+        run: |
+          test -s pokecrystal11.gbc
+          sha256sum pokecrystal11.gbc
+          python - <<'PY'
+          from pathlib import Path
+          rom = Path("pokecrystal11.gbc").read_bytes()
+          title = rom[0x134:0x13f]
+          assert title == b"RELEASECAND", f"Unexpected GBC title bytes: {title!r}"
+          print(f"Verified GBC header title: {title.decode('ascii')}")
+          PY
+
+      - name: Generate IPS patch for Rev A
+        run: |
+          python tools/release_candidate/make_ips.py \
+            /tmp/pokecrystal11-stock.gbc \
+            pokecrystal11.gbc \
+            release-candidate-v0.0.1-rev-a.ips
+          test -s release-candidate-v0.0.1-rev-a.ips
+
+      - name: Upload IPS patch only
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-candidate-v0.0.1-rev-a-patch
+          path: release-candidate-v0.0.1-rev-a.ips
+          if-no-files-found: error
+          compression-level: 0
